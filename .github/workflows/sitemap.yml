@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   schedule:
-    - cron: "30 2 * * *"   # 每天 02:30 UTC
+    - cron: "30 2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -19,27 +19,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate sitemap to docs/sitemap.xml
+      - name: Generate sitemap
         id: sm
         uses: cicirello/generate-sitemap@v1
         with:
           base-url-path: https://opmhoubue-eng.github.io/yuanmago-posts/
           path-to-root: docs
-          output-file: docs/sitemap.xml   # ✅ 固定写到 docs/
           include-pdf: false
 
-      - name: Show result path
+      - name: Move sitemap to docs/sitemap.xml
         run: |
-          echo "sitemap-path from action: ${{ steps.sm.outputs.sitemap-path }}"
+          set -e
+          SRC="${{ steps.sm.outputs.sitemap-path }}"
+          echo "generated at: $SRC"
+          mkdir -p docs
+          cp -f "$SRC" docs/sitemap.xml
+          echo "final path: docs/sitemap.xml"
           ls -la docs | sed -n '1,120p'
 
       - name: Commit sitemap if changed
         run: |
           set -e
           FILE="docs/sitemap.xml"
-          if [ ! -f "$FILE" ]; then
-            echo "sitemap not found"; exit 1
-          fi
           if ! git diff --quiet -- "$FILE"; then
             git config user.name  "actions-bot"
             git config user.email "actions@github.com"
