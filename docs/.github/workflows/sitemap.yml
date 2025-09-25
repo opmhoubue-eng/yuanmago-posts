@@ -1,47 +1,54 @@
-name: Build & Commit Sitemap (docs)
+name: sitemap
 
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
   schedule:
-    - cron: "30 2 * * *"   # 每天 02:30 UTC（北京 10:30）
-  workflow_dispatch: {}
+    - cron: "30 2 * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write   # 允许回写仓库
+  contents: write
 
 jobs:
-  build-sitemap:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 需要 git 历史获取 lastmod
+          fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Generate sitemap
+        id: sm
+        uses: cicirello/generate-sitemap@v1
         with:
-          python-version: "3.x"
+          base-url-path: https://opmhoubue-eng.github.io/yuanmago-posts/
+          path-to-root: docs
+          # 不能写 output-file，这个 action 不支持
 
-      - name: Generate docs/sitemap.xml
-        run: |
-          python3 docs/generate_sitemap.py
-          echo "==== Preview ===="
-          head -n 20 docs/sitemap.xml || true
-          echo "================="
-
-      - name: Commit & push if changed
+      - name: Move sitemap to docs/sitemap.xml
         run: |
           set -e
-          if git status --porcelain | grep -q "docs/sitemap.xml"; then
+          SRC="${{ steps.sm.outputs.sitemap-path }}"
+          echo "generated at: $SRC"
+          mkdir -p docs
+          # 如果已经在 docs 下，这一步相当于覆盖到固定文件名
+          cp -f "$SRC" docs/sitemap.xml
+          echo "final path: docs/sitemap.xml"
+          ls -la docs | sed -n '1,120p'
+
+      - name: Commit sitemap if changed
+        run: |
+          set -e
+          FILE="docs/sitemap.xml"
+          if ! git diff --quiet -- "$FILE"; then
             git config user.name  "actions-bot"
             git config user.email "actions@github.com"
-            git add docs/sitemap.xml
-            git commit -m "chore: update docs/sitemap.xml [skip ci]"
+            git add "$FILE"
+            git commit -m "update sitemap.xml [skip ci]"
             git push
-            echo "✅ sitemap.xml 已更新并推送。"
+            echo "pushed $FILE"
           else
-            echo "ℹ️ 无变化，无需提交。"
+            echo "no changes"
           fi
