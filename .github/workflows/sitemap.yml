@@ -1,4 +1,4 @@
-name: sitemap
+name: sitemap-docs-pr
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   build:
@@ -19,35 +20,95 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate sitemap
-        id: sm
-        uses: cicirello/generate-sitemap@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          base-url-path: https://opmhoubue-eng.github.io/yuanmago-posts/
-          path-to-root: docs
-          include-pdf: false
+          python-version: "3.11"
 
-      - name: Move sitemap to docs/sitemap.xml
+      - name: Generate docs/sitemap.xml (never fail)
+        shell: bash
         run: |
           set -e
-          SRC="${{ steps.sm.outputs.sitemap-path }}"
-          echo "generated at: $SRC"
-          mkdir -p docs
-          cp -f "$SRC" docs/sitemap.xml
-          echo "final path: docs/sitemap.xml"
-          ls -la docs | sed -n '1,120p'
+          python - <<'PY' || true
+          import os, subprocess, datetime, xml.sax.saxutils as sax
+          BASE_URL  = "https://opmhoubue-eng.github.io/yuanmago-posts"
+          POSTS_DIR = "docs"
+          OUT_FILE  = os.path.join(POSTS_DIR, "sitemap.xml")
+          os.makedirs(POSTS_DIR, exist_ok=True)
 
-      - name: Commit sitemap if changed
+          def git_last_commit_iso(p):
+              try:
+                  s = subprocess.check_output(
+                      ["git","log","-1","--pretty=format:%cI","--", p],
+                      text=True, stderr=subprocess.DEVNULL
+                  ).strip()
+                  return s or None
+              except Exception:
+                  return None
+
+          def file_mtime_iso(p):
+              ts = datetime.datetime.utcfromtimestamp(os.path.getmtime(p))
+              return ts.replace(microsecond=0).isoformat() + "Z"
+
+          urls=[]
+          for root, _, files in os.walk(POSTS_DIR):
+              for name in files:
+                  if not name.lower().endswith(".html"): continue
+                  full = os.path.join(root, name)
+                  rel  = os.path.relpath(full, POSTS_DIR).replace(os.sep, "/")
+                  loc  = f"{BASE_URL}/{rel}"
+                  last = git_last_commit_iso(full) or file_mtime_iso(full)
+                  urls.append((loc,last))
+          urls.sort(key=lambda x:x[0])
+
+          with open(OUT_FILE, "w", encoding="utf-8") as f:
+              f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+              f.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+              for loc,last in urls:
+                  f.write("  <url>\n")
+                  f.write(f"    <loc>{sax.escape(loc)}</loc>\n")
+                  f.write(f"    <lastmod>{last}</lastmod>\n")
+                  f.write("  </url>\n")
+              f.write('</urlset>\n')
+          print(f"OK: wrote {OUT_FILE} with {len(urls)} urls.")
+          PY
+
+          # 如果上面的 python 失败，这里确保至少有个空壳 sitemap，避免后续报错
+          test -f docs/sitemap.xml || cat > docs/sitemap.xml <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>
+          EOF
+
+          echo "=== docs/ listing ==="
+          ls -la docs | sed -n '1,200p'
+
+      - name: Commit to new branch if changed
+        id: commit
+        shell: bash
         run: |
           set -e
           FILE="docs/sitemap.xml"
-          if ! git diff --quiet -- "$FILE"; then
+          git add -N "$FILE" >/dev/null 2>&1 || true
+          if git status --porcelain "$FILE" | grep -q .; then
+            BR="sitemap-update-$(date +%s)"
             git config user.name  "actions-bot"
             git config user.email "actions@github.com"
+            git checkout -b "$BR"
             git add "$FILE"
-            git commit -m "update sitemap.xml [skip ci]"
-            git push
-            echo "pushed $FILE"
+            git commit -m "chore: update sitemap.xml"
+            git push -u origin "$BR"
+            echo "branch=$BR" >> "$GITHUB_OUTPUT"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "no changes"
-          fi
+            echo "No changes."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+
+      - name: Create Pull Request
+        if: steps.commit.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "Update sitemap.xml"
+          body: "Auto-generated sitemap for docs/"
+          branch: ${{ steps.commit.outputs.branch }}
+          base: main
+          delete-branch: true
