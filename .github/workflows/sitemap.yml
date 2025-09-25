@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "main" ]
   schedule:
-    - cron: "30 2 * * *"
+    - cron: "30 2 * * *"   # 每天 02:30 UTC
   workflow_dispatch:
 
 permissions:
@@ -14,62 +14,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Generate sitemap
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import os, subprocess, datetime, xml.sax.saxutils
-          BASE_URL="https://opmhoubue-eng.github.io/yuanmago-posts"
-          POSTS_DIR="docs"
-          OUTPUT_XML="docs/sitemap.xml"
-          os.makedirs(POSTS_DIR, exist_ok=True)
-          def git_last_commit_iso(p):
-              try:
-                  s=subprocess.check_output(
-                      ["git","log","-1","--pretty=format:%cI","--",p],
-                      text=True, stderr=subprocess.DEVNULL
-                  ).strip()
-                  return s or None
-              except Exception:
-                  return None
-          def file_mtime_iso(p):
-              ts=datetime.datetime.utcfromtimestamp(os.path.getmtime(p))
-              return ts.replace(microsecond=0).isoformat()+"Z"
-          urls=[]
-          for r,_,fs in os.walk(POSTS_DIR):
-              for n in fs:
-                  if not n.lower().endswith(".html"): continue
-                  full=os.path.join(r,n)
-                  rel=os.path.relpath(full,POSTS_DIR).replace(os.sep,"/")
-                  url=f"{BASE_URL}/{rel}"
-                  last=git_last_commit_iso(full) or file_mtime_iso(full)
-                  urls.append((url,last))
-          urls.sort(key=lambda x:x[0])
-          with open(OUTPUT_XML,"w",encoding="utf-8") as f:
-              f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-              f.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
-              for loc,last in urls:
-                  f.write('  <url>\n')
-                  f.write(f'    <loc>{xml.sax.saxutils.escape(loc)}</loc>\n')
-                  f.write(f'    <lastmod>{last}</lastmod>\n')
-                  f.write('  </url>\n')
-              f.write('</urlset>\n')
-          print("OK", len(urls))
-          PY
+        id: sm
+        uses: cicirello/generate-sitemap@v1
+        with:
+          base-url-path: https://opmhoubue-eng.github.io/yuanmago-posts/
+          path-to-root: docs
+          include-pdf: false
 
-      - name: Commit sitemap
-        shell: bash
+      - name: Commit sitemap if changed
         run: |
           set -e
-          if ! git diff --quiet -- docs/sitemap.xml; then
-            git config user.name "actions-bot"
+          FILE="${{ steps.sm.outputs.sitemap-path }}"
+          echo "sitemap path: $FILE"
+          if ! git diff --quiet -- "$FILE"; then
+            git config user.name  "actions-bot"
             git config user.email "actions@github.com"
-            git add docs/sitemap.xml
+            git add "$FILE"
             git commit -m "update sitemap.xml [skip ci]"
             git push
           else
             echo "no changes"
+          fi
