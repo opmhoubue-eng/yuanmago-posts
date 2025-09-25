@@ -5,7 +5,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: "30 2 * * *"   # 每天 02:30 UTC（北京时间 10:30）
+    - cron: "30 2 * * *"   # 每天 02:30 UTC（北京 10:30）
   workflow_dispatch: {}
 
 permissions:
@@ -20,24 +20,48 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Generate docs/sitemap.xml
+      - name: Debug: show tree
         run: |
-          python3 docs/generate_sitemap.py
+          set -x
+          pwd
+          ls -la
+          ls -la docs || true
 
-      - name: Commit & push if changed
+      - name: Generate docs/sitemap.xml (inline Python)
         run: |
-          set -e
-          if git status --porcelain | grep -q "docs/sitemap.xml"; then
-            git config user.name  "actions-bot"
-            git config user.email "actions@github.com"
-            git add docs/sitemap.xml
-            git commit -m "chore: update docs/sitemap.xml [skip ci]"
-            git push
-          else
-            echo "No changes in sitemap.xml"
-          fi
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, subprocess, datetime, xml.sax.saxutils, sys
+          BASE_URL   = "https://opmhoubue-eng.github.io/yuanmago-posts"
+          POSTS_DIR  = "docs"
+          OUTPUT_XML = "docs/sitemap.xml"
+
+          if not os.path.isdir(POSTS_DIR):
+              print(f"❌ 未找到目录：{POSTS_DIR}", file=sys.stderr)
+              sys.exit(1)
+
+          def git_last_commit_iso(path: str):
+              try:
+                  ts = subprocess.check_output(
+                      ["git", "log", "-1", '--pretty=format:%cI', "--", path],
+                      stderr=subprocess.DEVNULL,
+                      text=True
+                  ).strip()
+                  return ts or None
+              except Exception:
+                  return None
+
+          def file_mtime_iso(path: str):
+              ts = datetime.datetime.utcfromtimestamp(os.path.getmtime(path))
+              return ts.replace(microsecond=0).isoformat() + "Z"
+
+          urls = []
+          for root, _, files in os.walk(POSTS_DIR):
+              for name in files:
+                  if not name.lower().endswith(".html"):
+                      continue
+                  full = os.path.join(root, name)
+                  rel  = os.path.relpath(full, POSTS_DIR).replace(os.sep, "/")
+                  url  = f"{BASE_URL}/{rel}"
+                  last = git_last_commit_iso(full) or file_mtime_iso(full)
+                  urls.append((url,
