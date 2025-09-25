@@ -1,9 +1,9 @@
 name: sitemap-docs
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,22 +16,81 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+        continue-on-error: true
 
-      - name: Generate sitemap
-        run: python3 docs/generate_sitemap.py || true
+      #（可选）看看 runner 上的 Python
+      - name: Check Python
+        run: |
+          which python3 || true
+          python3 --version || true
+        continue-on-error: true
 
-      - name: Show docs dir
-        run: ls -la docs || true
+      # 直接在 runner 上用最小脚本生成 docs/sitemap.xml
+      - name: Generate docs/sitemap.xml
+        run: |
+          set +e
+          mkdir -p docs
+          python3 - <<'PY' || true
+import os, datetime, xml.sax.saxutils as sax
+
+BASE_URL = "https://opmhoubue-eng.github.io/yuanmago-posts"  # 你的 Pages 根（无尾斜杠）
+ROOT     = "docs"                                            # 扫描 docs/ 目录
+OUT      = "docs/sitemap.xml"                                # 输出到 docs/ 下
+
+def file_mtime_iso(p):
+    ts = datetime.datetime.utcfromtimestamp(os.path.getmtime(p))
+    return ts.replace(microsecond=0).isoformat() + "Z"
+
+urls = []
+for r, _, files in os.walk(ROOT):
+    for n in files:
+        if not n.lower().endswith(".html"):
+            continue
+        full = os.path.join(r, n)
+        rel  = os.path.relpath(full, ROOT).replace(os.sep, "/")
+        loc  = f"{BASE_URL}/{rel}"
+        last = file_mtime_iso(full)
+        urls.append((loc, last))
+
+urls.sort(key=lambda x: x[0])
+
+os.makedirs(os.path.dirname(OUT), exist_ok=True)
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+    f.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
+    for loc, last in urls:
+        f.write("  <url>\n")
+        f.write(f"    <loc>{sax.escape(loc)}</loc>\n")
+        f.write(f"    <lastmod>{last}</lastmod>\n")
+        f.write("  </url>\n")
+    f.write("</urlset>\n")
+
+print("OK: wrote", OUT, "with", len(urls), "urls")
+PY
+          # 如果上面 python 失败，仍然写一个空的 sitemap，保证后续可继续
+          if [ ! -f docs/sitemap.xml ]; then
+            cat > docs/sitemap.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>
+EOF
+          fi
+          echo "== docs listing =="
+          ls -la docs || true
+        continue-on-error: true
 
       - name: Commit sitemap if changed
         run: |
-          git config user.name "actions-bot"
+          set +e
+          FILE="docs/sitemap.xml"
+          git config user.name  "actions-bot"
           git config user.email "actions@github.com"
-          git add -N docs/sitemap.xml || true
-          if git status --porcelain docs/sitemap.xml | grep -q .; then
-            git add docs/sitemap.xml
+          git add -N "$FILE" >/dev/null 2>&1 || true
+          if git status --porcelain "$FILE" | grep -q .; then
+            git add "$FILE"
             git commit -m "update sitemap.xml [skip ci]" || true
             git push || true
-            echo "pushed"
+            echo "pushed $FILE (or skipped if protections)"
           else
             echo "no changes"
+          fi
+        continue-on-error: true
