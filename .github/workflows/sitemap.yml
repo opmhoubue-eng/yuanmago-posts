@@ -5,11 +5,11 @@ on:
     branches:
       - main
   schedule:
-    - cron: "30 2 * * *"   # 每天 02:30 UTC（北京 10:30）
+    - cron: "30 2 * * *"   # 每天 02:30 UTC（北京时间 10:30）
   workflow_dispatch: {}
 
 permissions:
-  contents: write   # 允许回写仓库
+  contents: write
 
 jobs:
   build-sitemap:
@@ -18,7 +18,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 需要 git 历史获取 lastmod
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -28,9 +28,6 @@ jobs:
       - name: Generate docs/sitemap.xml
         run: |
           python3 docs/generate_sitemap.py
-          echo "==== Preview ===="
-          head -n 20 docs/sitemap.xml || true
-          echo "================="
 
       - name: Commit & push if changed
         run: |
@@ -41,7 +38,6 @@ jobs:
             git add docs/sitemap.xml
             git commit -m "chore: update docs/sitemap.xml [skip ci]"
             git push
-            echo "✅ sitemap.xml 已更新并推送。"
           else
-            echo "ℹ️ 无变化，无需提交。"
+            echo "No changes in sitemap.xml"
           fi
