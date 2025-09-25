@@ -1,91 +1,75 @@
-name: Build & Commit Sitemap (docs)
+name: sitemap
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   schedule:
-    - cron: "30 2 * * *"   # 每天 02:30 UTC（北京时间 10:30）
-  workflow_dispatch: {}
+    - cron: "30 2 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-sitemap:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Debug: show repo tree
-        run: |
-          echo "== ROOT =="
-          ls -la
-          echo "== DOCS =="
-          ls -la docs || echo "(no docs dir)"
-
-      - name: Generate docs/sitemap.xml (inline Python)
+      - name: Generate sitemap
+        shell: bash
         run: |
           python3 - <<'PY'
           import os, subprocess, datetime, xml.sax.saxutils
-          BASE_URL   = "https://opmhoubue-eng.github.io/yuanmago-posts"
-          POSTS_DIR  = "docs"
-          OUTPUT_XML = "docs/sitemap.xml"
+          BASE_URL="https://opmhoubue-eng.github.io/yuanmago-posts"
+          POSTS_DIR="docs"
+          OUTPUT_XML="docs/sitemap.xml"
           os.makedirs(POSTS_DIR, exist_ok=True)
-
-          def git_last_commit_iso(path):
+          def git_last_commit_iso(p):
               try:
-                  return subprocess.check_output(
-                      ["git","log","-1","--pretty=format:%cI","--",path],
+                  s=subprocess.check_output(
+                      ["git","log","-1","--pretty=format:%cI","--",p],
                       text=True, stderr=subprocess.DEVNULL
-                  ).strip() or None
+                  ).strip()
+                  return s or None
               except Exception:
                   return None
-
-          def file_mtime_iso(path):
-              ts = datetime.datetime.utcfromtimestamp(os.path.getmtime(path))
+          def file_mtime_iso(p):
+              ts=datetime.datetime.utcfromtimestamp(os.path.getmtime(p))
               return ts.replace(microsecond=0).isoformat()+"Z"
-
           urls=[]
-          for root,_,files in os.walk(POSTS_DIR):
-              for name in files:
-                  if not name.lower().endswith(".html"): continue
-                  full=os.path.join(root,name)
-                  rel=os.path.relpath(full, POSTS_DIR).replace(os.sep,"/")
+          for r,_,fs in os.walk(POSTS_DIR):
+              for n in fs:
+                  if not n.lower().endswith(".html"): continue
+                  full=os.path.join(r,n)
+                  rel=os.path.relpath(full,POSTS_DIR).replace(os.sep,"/")
                   url=f"{BASE_URL}/{rel}"
                   last=git_last_commit_iso(full) or file_mtime_iso(full)
                   urls.append((url,last))
-
           urls.sort(key=lambda x:x[0])
           with open(OUTPUT_XML,"w",encoding="utf-8") as f:
               f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
               f.write('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
-              for loc,lastmod in urls:
-                  f.write("  <url>\n")
-                  f.write(f"    <loc>{xml.sax.saxutils.escape(loc)}</loc>\n")
-                  f.write(f"    <lastmod>{lastmod}</lastmod>\n")
-                  f.write("  </url>\n")
-              f.write("</urlset>\n")
-
-          print(f"✅ Generated {OUTPUT_XML} with {len(urls)} urls.")
+              for loc,last in urls:
+                  f.write('  <url>\n')
+                  f.write(f'    <loc>{xml.sax.saxutils.escape(loc)}</loc>\n')
+                  f.write(f'    <lastmod>{last}</lastmod>\n')
+                  f.write('  </url>\n')
+              f.write('</urlset>\n')
+          print("OK", len(urls))
           PY
-          echo "==== Preview ===="
-          head -n 20 docs/sitemap.xml || true
 
-      - name: Commit & push if changed
+      - name: Commit sitemap
+        shell: bash
         run: |
           set -e
           if ! git diff --quiet -- docs/sitemap.xml; then
-            git config user.name  "actions-bot"
+            git config user.name "actions-bot"
             git config user.email "actions@github.com"
             git add docs/sitemap.xml
-            git commit -m "chore: update sitemap.xml [skip ci]"
-            git pull --rebase origin main || true
-            git push origin HEAD:main
-            echo "✅ sitemap.xml updated & pushed."
+            git commit -m "update sitemap.xml [skip ci]"
+            git push
           else
-            echo "ℹ️ No changes in sitemap.xml, nothing to commit."
-            exit 0   # ✅ 即使没变化也算成功
-          fi
+            echo "no changes"
