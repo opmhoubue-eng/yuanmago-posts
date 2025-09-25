@@ -25,7 +25,7 @@ jobs:
         with:
           base-url-path: https://opmhoubue-eng.github.io/yuanmago-posts/
           path-to-root: docs
-          # 不能写 output-file，这个 action 不支持
+          include-pdf: false
 
       - name: Move sitemap to docs/sitemap.xml
         run: |
@@ -33,7 +33,6 @@ jobs:
           SRC="${{ steps.sm.outputs.sitemap-path }}"
           echo "generated at: $SRC"
           mkdir -p docs
-          # 如果已经在 docs 下，这一步相当于覆盖到固定文件名
           cp -f "$SRC" docs/sitemap.xml
           echo "final path: docs/sitemap.xml"
           ls -la docs | sed -n '1,120p'
