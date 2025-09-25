@@ -19,25 +19,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate sitemap
+      - name: Generate sitemap to docs/sitemap.xml
         id: sm
         uses: cicirello/generate-sitemap@v1
         with:
           base-url-path: https://opmhoubue-eng.github.io/yuanmago-posts/
           path-to-root: docs
+          output-file: docs/sitemap.xml   # ✅ 固定写到 docs/
           include-pdf: false
+
+      - name: Show result path
+        run: |
+          echo "sitemap-path from action: ${{ steps.sm.outputs.sitemap-path }}"
+          ls -la docs | sed -n '1,120p'
 
       - name: Commit sitemap if changed
         run: |
           set -e
-          FILE="${{ steps.sm.outputs.sitemap-path }}"
-          echo "sitemap path: $FILE"
+          FILE="docs/sitemap.xml"
+          if [ ! -f "$FILE" ]; then
+            echo "sitemap not found"; exit 1
+          fi
           if ! git diff --quiet -- "$FILE"; then
             git config user.name  "actions-bot"
             git config user.email "actions@github.com"
             git add "$FILE"
             git commit -m "update sitemap.xml [skip ci]"
             git push
+            echo "pushed $FILE"
           else
             echo "no changes"
           fi
