@@ -18,21 +18,47 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate sitemap
-        run: python3 docs/generate_sitemap.py || true
+      # 纯 Bash 生成 docs/sitemap.xml（不依赖 Python/第三方 Action）
+      - name: Generate sitemap.xml
+        run: |
+          set -e
+          mkdir -p docs
+          OUT="docs/sitemap.xml"
+          BASE="https://opmhoubue-eng.github.io/yuanmago-posts"
 
-      - name: Show docs dir
-        run: ls -la docs || true
+          # 开头
+          printf '%s\n' '<?xml version="1.0" encoding="UTF-8"?>' > "$OUT"
+          printf '%s\n' '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' >> "$OUT"
+
+          # 首页
+          printf '  <url><loc>%s/</loc></url>\n' "$BASE" >> "$OUT"
+
+          # 遍历 docs 下所有 .html，写入 <url> 节点
+          while IFS= read -r -d '' f; do
+            rel="${f#docs/}"
+            loc="$BASE/$rel"
+            lastmod="$(date -u +%Y-%m-%d)"
+            printf '  <url>\n    <loc>%s</loc>\n    <lastmod>%s</lastmod>\n  </url>\n' "$loc" "$lastmod" >> "$OUT"
+          done < <(find docs -type f -name '*.html' -print0)
+
+          # 结尾
+          printf '%s\n' '</urlset>' >> "$OUT"
+
+          echo "=== Preview ==="
+          sed -n '1,40p' "$OUT" || true
 
       - name: Commit sitemap if changed
         run: |
-          git config user.name "actions-bot"
+          set -e
+          FILE="docs/sitemap.xml"
+          git config user.name  "actions-bot"
           git config user.email "actions@github.com"
-          git add -N docs/sitemap.xml || true
-          if git status --porcelain docs/sitemap.xml | grep -q .; then
-            git add docs/sitemap.xml
+          git add -N "$FILE" >/dev/null 2>&1 || true
+          if git status --porcelain "$FILE" | grep -q .; then
+            git add "$FILE"
             git commit -m "update sitemap.xml [skip ci]" || true
             git push || true
-            echo "pushed"
+            echo "pushed $FILE"
           else
             echo "no changes"
+          fi
