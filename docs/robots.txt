@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://opmhoubue-eng.github.io/yuanmago-posts/sitemap.xml
