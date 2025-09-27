@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>新品FXcoin交易所源码 | 杠杆合约+控盘分销 | FastAdmin框架二开版本</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="canonical" href="https://yuanmago.com/137938.html"></head>
+<body><main style="max-width:860px;margin:40px auto;padding:0 16px;line-height:1.75;">
+<h1>新品FXcoin交易所源码 | 杠杆合约+控盘分销 | FastAdmin框架二开版本</h1>
+<p>这套 <strong>FXcoin交易所源码</strong> 为最新版本，基于 <strong>FastAdmin框架二次开发</strong>，支持 <strong>币币交易、法币交易、杠杆合约、控盘模式、代理分销体系</strong>，并附带 <strong>原生APP源码</strong>，功能完整，适合研究和二次开发。</p>
+
+<p><strong>核心特点：</strong></p>
+
+<ul>
+<li><strong>FastAdmin框架二开</strong>：前后台逻辑清晰，扩展性强。</li>
+<li><strong>多种交易模式</strong>：支持币币、法币、杠杆合约，满足多样化需求。</li>
+<li><strong>控盘分销机制</strong>：支持多级分销与后台控盘功能。</li>
+<li><strong>原生APP源码</strong>：安卓前端源码，已实测可用，UI流畅。</li>
+<li><strong>国际化适配</strong>：适合海外运营的数字资产交易平台。</li>
+</ul>
+
+<hr />
+
+<h2><strong>测试环境</strong></h2>
+
+<ul>
+<li>服务器：CentOS 7.6</li>
+<li>管理工具：宝塔面板</li>
+<li>Web服务：Nginx + PHP7.3</li>
+<li>数据库：MySQL 5.6</li>
+<li>进程管理：Supervisor 2.2</li>
+</ul>
+
+<hr />
+
+<h2><strong>安装部署步骤</strong></h2>
+
+<ol>
+<li><p><strong>更新服务器</strong></p>
+
+<p><code>yum update</code></p></li>
+<li><strong>安装BT集成环境</strong></li>
+<li><p><strong>安装依赖</strong></p>
+
+<ul>
+<li>Nginx</li>
+<li>MySQL 5.6</li>
+<li>PHP 7.3</li>
+<li>Supervisor 2.2</li>
+</ul></li>
+<li><p><strong>配置PHP</strong></p>
+
+<ul>
+<li>安装扩展：<code>redis</code>、<code>Swoole4</code></li>
+<li>删除禁用函数：<code>shell_exec</code>、<code>proc_open</code></li>
+</ul></li>
+<li><p><strong>修改配置文件</strong></p>
+
+<ul>
+<li><code>/application/config.php</code>：代币服务外网IP</li>
+<li><code>/application/extra/swoole.php</code>：外网IP</li>
+<li><code>database.php</code>：数据库配置</li>
+<li><p>调试模式：</p>
+
+<p><code>'app_debug' =&gt; true,  
+'app_trace' =&gt; true,</code></p></li>
+</ul></li>
+<li><strong>放通端口</strong>：3306、6379、9111、8069</li>
+<li><p><strong>上传配置文件</strong></p>
+
+<ul>
+<li>上传并解压 <code>profile.zip</code> 到 <code>/www/server/panel/plugin/supervisor/profile</code></li>
+</ul></li>
+<li><p><strong>导入数据库</strong></p>
+
+<ul>
+<li>导入 <code>ex2.zip</code>，并按要求清空/保留指定表数据。</li>
+</ul></li>
+<li><p><strong>测试运行</strong></p>
+
+<ul>
+<li>生成模拟账号，检查钱包地址是否正常生成。</li>
+</ul></li>
+<li><strong>后台登录</strong></li>
+</ol>
+
+<ul>
+<li>地址：<code>http://域名/wQ2pdlSeK4.php</code></li>
+<li>账号：admin</li>
+</ul>
+
+<ol start="11">
+<li><strong>APP打包</strong></li>
+</ol>
+
+<ul>
+<li>支持原生APP打包（安卓），可根据需求扩展。</li>
+</ul>
+
+<hr />
+
+<h2><strong>适用场景</strong></h2>
+
+<ul>
+<li>搭建海外数字货币交易所</li>
+<li>研究杠杆合约与分销模式</li>
+<li>区块链金融系统二次开发</li>
+<li>原生APP交易所应用定制</li>
+<li><img src="https://pub-7eb420edbb5641e0a4d6027c727f4217.r2.dev/wp-content/uploads/2025/09/1621425691-b53b3a3d6ab90ce.jpg" alt="图片[1]-源码狗" /> <img src="https://pub-7eb420edbb5641e0a4d6027c727f4217.r2.dev/wp-content/uploads/2025/09/1621425701-3295c76acbf4caa.jpg" alt="图片[2]-源码狗" /> <img src="https://pub-7eb420edbb5641e0a4d6027c727f4217.r2.dev/wp-content/uploads/2025/09/1621425708-28dd2c7955ce926.jpg" alt="图片[3]-源码狗" /></li>
+</ul>
+
+<p>原文摘自：源码狗  请在谷歌搜索 yuanmago.com </p>
+</main></body></html>
