@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>哈希值竞猜源码 | 纯合约返奖系统 | 幸运哈希源码</title><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="canonical" href="https://yuanmago.com/137953.html"></head>
+<body><main style="max-width:860px;margin:40px auto;padding:0 16px;line-height:1.75;">
+<h1>哈希值竞猜源码 | 纯合约返奖系统 | 幸运哈希源码</h1>
+<p>这套 <strong>哈希值竞猜源码</strong> 基于 <strong>纯合约返奖模式</strong> 开发，玩法公开透明，支持 <strong>单双、尾数、牛牛</strong> 多种规则。系统包含 <strong>返奖配置、转账功能、监听收款脚本</strong>，源码完整，适合学习研究区块链竞猜逻辑。</p>
+
+<h3><strong>返奖配置</strong></h3>
+
+<ul>
+<li>修改路径：<code>/application/index/controller/wxpay.php</code></li>
+<li>返奖地址与私钥配置：第 <strong>25、26行</strong></li>
+<li>监听充值玩法地址配置：200行以后</li>
+</ul>
+
+<hr />
+
+<h3><strong>转账功能脚本</strong></h3>
+
+<p>通过定时脚本实现自动转账：</p>
+
+<p>`#!/bin/bash<br />
+PATH=/bin:/sbin:/usr/bin:/usr/local/bin:/usr/sbin<br />
+step=5 # 间隔秒数，不能大于10</p>
+
+<p>for (( i = 0; i &lt; 60; i=(i+step) )); do<br />
+curl http://xxx/index/wpay/auto<em>transfer3<br />
+curl http://xxx/index/wpay/auto</em>transfer2<br />
+curl http://xxx/index/wpay/auto_transfer1<br />
+sleep $step<br />
+done`</p>
+
+<p><code>exit 0</code></p>
+
+<blockquote>
+  <p>注意：将 <code>xxx</code> 替换成你的域名。</p>
+</blockquote>
+
+<hr />
+
+<h3><strong>监听收款脚本</strong></h3>
+
+<p>自动监听用户充值：</p>
+
+<p>`#!/bin/bash<br />
+PATH=/bin:/sbin:/usr/bin:/usr/local/bin:/usr/sbin<br />
+step=3 # 间隔秒数，不能大于10</p>
+
+<p>for (( i = 0; i &lt; 60; i=(i+step) )); do<br />
+curl http://xxx/index/wpay/index3<br />
+curl http://xxx/index/wpay/index2<br />
+curl http://xxx/index/wpay/index1<br />
+sleep $step<br />
+done`</p>
+
+<p><code>exit 0</code></p>
+
+<ul>
+<li><p><strong>玩法说明</strong>：</p>
+
+<ul>
+<li><code>index3</code> → 单双竞猜</li>
+<li><code>index2</code> → 尾数竞猜</li>
+<li><code>index1</code> → 牛牛竞猜</li>
+</ul></li>
+</ul>
+
+<hr />
+
+<h2><strong>适用场景</strong></h2>
+
+<ul>
+<li>区块链竞猜系统研究</li>
+<li>哈希值游戏逻辑学习</li>
+<li>合约返奖机制演示</li>
+<li>二次开发的区块链娱乐类项目</li>
+<li><img src="https://pub-7eb420edbb5641e0a4d6027c727f4217.r2.dev/wp-content/uploads/2025/09/1677681530-79643b4c93889c4-1024x739.png" alt="图片[1]-源码狗" /></li>
+</ul>
+
+<p>原文摘自：源码狗  请在谷歌搜索 yuanmago.com </p>
+</main></body></html>
